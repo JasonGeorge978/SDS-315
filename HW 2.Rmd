@@ -1,0 +1,193 @@
+---
+title: "SDS 315 - HW2"
+author: "Jason George (jg82397)"
+date: ""
+output: pdf_document
+---
+
+```{r global_options, echo=FALSE}
+knitr::opts_chunk$set(fig.height=4, fig.width=10, warning=FALSE, message=FALSE, tidy=TRUE, echo=FALSE, tidy.opts=list(width.cutoff=60))
+```
+
+```{r}
+# Read in data and libraries
+library(tinytex)
+library(tidyverse)
+library(ggplot2)
+library(kableExtra)
+profs <- read_csv("profs.csv")
+bike <- read_csv("bikeshare.csv")
+metro <- read_csv("capmetro_UT.csv")
+billboard <- read_csv("billboard.csv")
+```
+
+# **Problem. 1**
+
+## **Part A**
+
+```{r}
+# Plot graph
+ggplot(profs) + geom_histogram(aes(x=eval),fill="tomato",color="black",binwidth = 0.1) + labs(title = "Distribution of Course Evaluations",x= "Evaluation Score",y="Count") + theme_minimal()
+```
+The histogram displays the distribution of course evaluation scores, with most ratings concentrated between 3.5 and 4.5. The distribution appears slightly skewed to the left, indicating that higher evaluation scores are more common than lower ones. The peak occurs around a score of 4, suggesting that the majority of evaluations were high.
+
+## **Part B**
+
+```{r}
+# Plot graph
+ggplot(profs) + geom_boxplot(aes(x= native,y= eval)) + coord_flip() + theme_minimal() + labs(title="Native English Speaker vs Teacher Evaluations", y="Evaluation Scores",x="Native English Speaker")
+```
+This box plot compares teacher evaluation scores based on whether the teacher is a native English speaker. Overall, native speakers tend to receive slightly higher and more consistent scores, while non-native speakers show more variation in their ratings. There are a few low outliers for native speakers, but the median score is still higher than for non-native speakers. This suggests that a teacher being an english native speaker might play a role in how students rate their instructors.
+
+## **Part C**
+
+```{r}
+# Plot graph
+ggplot(profs) + geom_histogram(aes(x=eval),fill="violet",color="black") + facet_wrap(~gender, nrow=2) + theme_minimal() + labs(title="Evaluation Scores by Gender",x="Evaluation Score", y="Count")
+```
+This histogram compares evaluation scores for male and female teachers Both distributions are fairly similar, with most ratings around 4. However, male instructors appear to have slightly more evaluations at the higher end, while female instructors show a somewhat more even spread. The overall pattern suggests that gender may not have a huge impact on the scores, but there could be some differences in how students rate their instructors.
+
+## **Part D**
+
+```{r}
+# Plot graph
+ggplot(profs) + geom_point(aes(x=beauty,y=eval)) + theme_classic() + labs(title = "Evaluation Scores vs Attractiveness of Profesor", x="Beauty Score", y="Evaluation Scores")
+```
+This scatter plot explores the relationship between a professor’s physical attractiveness (beauty score) and their course evaluation scores. While there is considerable variation, a very slight positive trend is visible. The correlation coefficient of `r cor(profs$beauty,profs$eval)` indicates a weak but positive relationship, meaning attractiveness may play a small role in influencing course ratings, but not a strong factor compared to others. 
+
+# **Problem. 2**
+
+## **Plot A**
+
+```{r}
+# Make table with hr and avg total
+bike_group <- group_by(bike,hr)
+bike_avg <- summarise(bike_group, avgTotal = mean(total))
+```
+
+```{r}
+# Plot graph
+ggplot(bike_avg) + geom_line(aes(x=hr,y=avgTotal))+ theme_minimal() + labs(title="Average Hourly Bike Rentals vs Hour of the Day", x="Hour of Day", y="Averge Hourly Bike Rentals")
+```
+This line plot shows the average number of bike rentals throughout the day. There are two clear peaks: one in the morning around 8 AM, likely relating to commuters heading to work, and another, larger peak in the evening around 5-6 PM, which aligns with the end of the workday. Bike rentals are lowest in the early morning and late at night, reflecting typical usage patterns where demand is highest during commuting hours.
+
+## **Plot B**
+
+```{r}
+# Table with hr, working day, and avg day total
+bike_hr_day <- group_by(bike,hr,workingday)
+bike_avg_day <- summarise(bike_hr_day, avg_day_total=mean(total))
+# Renaming 0,1 to Non- Work Day and Work Day 
+bike_avg_day$workingday <- factor(bike_avg_day$workingday, levels = c(0,1),labels = c("Non-Work Day","Work Day"))
+# Plot graph
+ggplot(bike_avg_day) + geom_line(aes(x=hr,y=avg_day_total))+ theme_minimal() + facet_wrap(~workingday) + labs(title="Average Bike Rentals by Hour of Day by Work Day Status",x="Hour of Day",y="Average Bike Rentals")
+
+```
+This plot compares bike rental patterns on workdays and non-workdays. On workdays, rentals peak sharply around 8 AM and again around 5-6 PM, aligning with typical commuting hours. In contrast, non-workdays show a more gradual increase, with rentals peaking in the afternoon around 2-3 PM and declining into the evening. This suggests that on workdays, bike usage is driven by commuting, whereas on non-workdays, it probably follows leisurely activity. 
+
+## **Plot C**
+
+```{r}
+# Make a dataset with only hr 9 
+bike_nine = filter(bike, hr == 9)
+# Then group by certain factors
+bike_nine_group <- group_by(bike_nine,weathersit, workingday)
+bike_nine <- summarise(bike_nine_group, total_weathersit = mean(total))
+bike_nine$workingday <- factor(bike_nine$workingday, levels = c(0,1),labels = c("Non-Work Day","Work Day"))
+
+ggplot(bike_nine) + geom_col(aes(x=weathersit, y=total_weathersit),fill="turquoise") + facet_wrap(~workingday) + theme_minimal() + labs(title="Average Ridership by Weather Situation at 9AM",x="Weather Situation",y="Average Ridership")
+```
+This bar chart shows how bike ridership at 9 AM varies based on weather conditions for both workdays and non-workdays. On both types of days, ridership is highest when the weather is clear (1) and decreases as conditions worsen. However, the drop in ridership under poor weather (3) is much higher on non-workdays, suggesting that commuters are more likely to ride in bad weather for work whereas leisure riders might not go out when conditions are unfavorable.
+
+\newpage 
+
+# **Problem. 3**
+
+```{r}
+metro = mutate(metro,
+day_of_week = factor(day_of_week,
+levels=c("Mon", "Tue", "Wed","Thu", "Fri", "Sat", "Sun")),
+month = factor(month,
+levels=c("Sep", "Oct","Nov")))
+```
+
+## **Question. 1**
+
+```{r}
+# Find average boarding based on certain things
+avg_board <- group_by(metro,hour_of_day,day_of_week,month)
+metro <- mutate(avg_board,avg_boarding = mean(boarding))
+# Plot graph
+ggplot(metro) + geom_line(aes(x=hour_of_day,y=avg_boarding,color=month)) + facet_wrap(~day_of_week) + theme_minimal() + labs(title="Average Boardings by Hour of Day and Month and Day of the Week", x="Hour of the Day", y= "Average Boarding",color="Month")
+```
+This figure shows the average number of boardings by hour of the day, by day of the week and across three months (September, October, and November). Across weekdays (Monday to Friday), the hour of peak boardings is relatively consistent, occurring around morning commute hours (8-9 AM) and evening commute hours (5-6 PM). On weekends, boardings significantly lower and are more evenly spread throughout the day.
+
+Mondays in September appear to have fewer boardings compared to other days and months, which could be due to labor day and temperature and other weather. Similarly, the drop in boardings on Wednesdays, Thursdays, and Fridays in November may be linked to holidays effects, weather conditions, and lessened ridership because it is approaching winter.
+
+\newpage
+
+## **Question. 2**
+
+```{r}
+# Plot graph
+ggplot(metro) + geom_point(aes(x=temperature,y=boarding,color=weekend),size= 1 ,alpha=.7) + facet_wrap(~hour_of_day) + theme_minimal() + labs(title="Boardings vs Temperature by Hour of Day and Day Status",x="Temperature (F°)",y="Boardings") 
+```
+This figure shows the relationship between temperature and the number of boardings at different hours of the day, separated by weekday (red) and weekend (blue). Each panel represents a specific hour, showing how boardings vary with temperature throughout the day.
+
+When controlling for both the hour of the day and weekend status, temperature does not appear to have a strong effect on the number of boardings. The density of boardings remains somewhat consistent across temperature ranges, suggesting that students rely on the bus service despite weather conditions. However, there seems to be fewer boardings on weekends compared to weekdays, indicating that ridership may be more influenced by the day of the week rather than temperature.
+
+\newpage
+
+
+# **Problem. 4**
+
+## **Part. A**
+
+```{r}
+# Change week to 1 to make a count of total weeks
+week_sub <- mutate(billboard, week=1)
+top_ten <- group_by(week_sub,song,performer)
+top_ten_weeks <- summarise(top_ten, total_weeks= sum(week))
+# Make it highest on top
+top_ten_weeks <- arrange(top_ten_weeks, desc(total_weeks))
+table <- head(top_ten_weeks,10) # Top Ten
+
+# Formatted table 
+table <- kable(table,col.names= c("Song", "Performer", "Total Weeks"),caption = "Top 10 Songs by Total Weeks on Billboard Top 100")
+
+kable_styling(table,bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE, position = "center")
+```
+
+This table lists the top 10 songs that have spent the most weeks on the Billboard Top 100 chart. "Radioactive" by Imagine Dragons holds the record with 87 weeks, followed by "Sail" by AWOLNATION at 79 weeks. "Blinding Lights" by The Weeknd and "I'm Yours" by Jason Mraz both lasted 76 weeks. The list includes a mix and variety of different music genres showing staying on the charts is possible for all genres.
+
+## **Part. B**
+
+```{r}
+# Remove 1958 and 2021 
+mus_div <- filter(billboard, year != 1958 & year != 2021)
+mus_div <- group_by(mus_div,year)
+mus_div <- summarise(mus_div, unique_song= length(unique(song))) #Get count of unique songs
+
+# Plot graph
+ggplot(mus_div) + geom_line(aes(x=year,y=unique_song)) + theme_minimal() + labs(title="Music Diversity by Year",x="Year",y="Musical Diversity")
+```
+This line graph tracks musical diversity over time, showing how the variety of music styles has evolved from the 1950s to the present. Musical diversity peaked in the 1960s but slowly declined, reaching its lowest point around the early 2000s.Then from 2010 onward, there has been a resurgence in diversity possibly due to technology and the internet. 
+
+## **Part. C**
+
+```{r}
+# Ensure total_weeks is >= 10
+ten_week_hit <- group_by(week_sub, song, performer)
+ten_week_hit <- summarise(ten_week_hit, total_weeks= sum(week))
+ten_week_hit <- filter(ten_week_hit, total_weeks >= 10)
+
+# Only includes top 30 artists
+ten_week_hit <- group_by(ten_week_hit,performer)
+ten_week_hit <- summarise(ten_week_hit,songs=length(song))
+ten_week_hit <- filter(ten_week_hit,songs >= 30)
+
+ggplot(ten_week_hit) + geom_col(aes(fct_reorder(performer,songs),songs),fill="pink",color="black") + coord_flip() + theme_minimal() + labs(title="Artists with 30 Plus Ten Week Hits",y="Songs",x="Artists")
+
+
+```
+This bar chart displays artists who have had 30 or more songs chart for at least ten weeks. Elton John leads the list with the most long-running hits, followed closely by Madonna and Kenny Chesney. The chart includes a mix of many different artists from many genres and eras. 
