@@ -1,7 +1,7 @@
 ---
 title: "SDS 315 - HW2"
 author: "Jason George (jg82397)"
-date: ""
+date: "https://github.com/JasonGeorge978/SDS-315/blob/main/HW%202.Rmd"
 output: pdf_document
 ---
 
