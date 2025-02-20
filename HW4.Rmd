@@ -1,0 +1,157 @@
+---
+title: "SDS 315 - HW4"
+author: "Jason George (jg82397)"
+date: "https://github.com/JasonGeorge978/SDS-315"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.height=5, fig.width=10, warning=FALSE, message=FALSE, tidy=TRUE, echo=FALSE, tidy.opts=list(width.cutoff=60))
+```
+
+```{r}
+library(tinytex)
+library(tidyverse)
+library(ggplot2)
+library(mosaic)
+library(kableExtra)
+```
+
+\newpage
+
+## **Problem 1 - Iron Bank**
+
+```{r}
+sec_sim = do(100000)*nflip(n=2021,prob=0.024)
+ggplot(sec_sim) + 
+  geom_histogram(aes(x=nflip), binwidth=1)
+
+p_value = sum(sec_sim >= 70)/100000
+
+```
+
+The null hypothesis is the flagged trades from Iron Bank occur at a probability of 2.4%. The test statistic I used to measure evidence for or against the null hypothesis was a Monte Carlo simulation with 100,000 simulations and p-value. The p-value ,of 0.00187, is much smaller than 0.05 and around 0.001 therefore this is strong evidence that Iron Bank's employees trading acitivty is flagged at an unsually high rate and that we should reject the null hypothesis. 
+
+\newpage
+
+## **Problem 2: health inspections**
+
+```{r}
+
+health_sim = do(100000)*nflip(n=50, prob=0.030)
+ggplot(health_sim) + 
+  geom_histogram(aes(x=nflip), binwidth=1)
+
+p_value_health = sum(health_sim >= 8)/100000
+```
+
+The null hypothesis is that the the rate of health care violations should be on average 3%.  The test statistic I used to measure evidence for or against the null hypothesis was a Monte Carlo simulation with 100,000 simulations and p-value. The p-value ,of 0.00013, is much smaller than 0.05 and around 0.0001 therefore this is strong evidence that Gourmet Bites has a significantly larger amount of health code violations past just random chance. Based on this, it suggests that the Health Departments investigation is justified. 
+
+\newpage
+
+## **Problem 3: Evaluating Jury Selection for Bias**
+
+```{r}
+jury_observed <- c(85, 56, 59, 27, 13)
+jury_expected <- c(72, 60, 48, 36, 24)
+
+# chi_square = sum((jury_observed - jury_expected)^2 / jury_expected)
+
+chisq.test(jury_observed, p = jury_expected / sum(jury_expected), rescale.p = TRUE)
+
+```
+
+The null hypothesis is the  process of jury selection is unbiased based on the proportions of jurors from each group. I utilized the Chi-Square test and p-values to make my analysis. T was computed to be a value of 12.4 and a p-value of 0.014. A difference of 12 is quite high considering the values are all around 20-30 of another and n=240. The p-value suggests that systematic bias may be present and not just random because it is lower than 0.05. The other explanations could be differences in hardships, exemptions, or even scheduling conflicts. We could investigate by reviewing juror eligibility records and the randomization processes. 
+
+\newpage
+
+## **Problem 4: LLM watermarking**
+
+### **Part A: the null or reference distribution**
+
+```{r}
+
+calculate_chi_squared <- function(observed, expected) {
+  chi_squared <- sum((observed - expected)^2 / expected)
+  return(chi_squared)
+}
+
+brown_sentences <- readLines("brown_sentences.txt")
+letter_frequencies = read.csv("letter_frequencies.csv")
+
+preprocess_and_count <- function(text) {
+  clean_text <- toupper(gsub("[^A-Za-z]", "", text))
+  text_counts <- table(factor(strsplit(clean_text, "")[[1]], levels = LETTERS))
+  return(text_counts)
+}
+
+#total_letters=sum(text_counts)
+
+#counts = total_letters * letter_frequencies$Probability
+
+expected_freq <- letter_frequencies$Probability
+
+
+chi_squared_stats <- numeric(length(brown_sentences))
+
+for (i in seq_along(brown_sentences)) {
+  observed_counts <- preprocess_and_count(brown_sentences[i])
+  
+  sentence_length <- sum(observed_counts)
+  expected_counts <- expected_freq * sentence_length
+  
+  chi_squared_stats[i] <- calculate_chi_squared(observed_counts, expected_counts)
+}
+
+hist(chi_squared_stats, breaks = 50, main = "Range of Chi-Squared Values from Text", 
+     xlab = "Chi-Squared Values")
+
+```
+
+### **Part B: checking for a watermark**
+
+```{r}
+  # Save the null distribution 
+null_distribution <- chi_squared_stats
+
+sentences <- c(
+  "She opened the book and started to read the first chapter, eagerly anticipating what might come next.",
+  "Despite the heavy rain, they decided to go for a long walk in the park, crossing the main avenue by the fountain in the center.",
+  "The museum’s new exhibit features ancient artifacts from various civilizations around the world.",
+  "He carefully examined the document, looking for any clues that might help solve the mystery.",
+  "The students gathered in the auditorium to listen to the guest speaker’s inspiring lecture.",
+  "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.",
+  "The chef demonstrated how to prepare a delicious meal using only locally sourced ingredients, focusing mainly on some excellent dinner recipes from Spain.",
+  "They watched the sunset from the hilltop, marveling at the beautiful array of colors in the sky.",
+  "The committee reviewed the proposal and provided many points of useful feedback to improve the project’s effectiveness.",
+  "Despite the challenges faced during the project, the team worked tirelessly to ensure its successful completion, resulting in a product that exceeded everyone’s expectations."
+)
+
+# Compute chi-squared for each sentence
+chi_squared_sentences <- numeric(length(sentences))
+for (i in seq_along(sentences)) {
+  observed_counts <- preprocess_and_count(sentences[i])
+  sentence_length <- sum(observed_counts)
+  expected_counts <- expected_freq * sentence_length
+  chi_squared_sentences[i] <- calculate_chi_squared(observed_counts, expected_counts)
+}
+
+# Compute p-values for each sentence
+p_values <- numeric(length(chi_squared_sentences))
+for (i in 1:length(chi_squared_sentences)) {
+  p_values[i] <- mean(null_distribution >= chi_squared_sentences[i])
+}
+
+results <- data.frame(
+  Sentence = sentences,
+  P_Value = round(p_values, 3)
+)
+kable(results)
+
+```
+
+Based on the table we can see that the one sentence that is most likely watermarked by an LLM is sentence 6. 
+This is the text ("Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.")
+
+You can tell because firstly its p-value is vastly lower than all others showing it deviates most from typical English usage. It suggests it is highly unlikely that the pattern of letters produced in sentence 6 by chance, so it stands out. It also has odd word usage and structure.
