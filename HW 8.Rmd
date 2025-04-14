@@ -1,0 +1,127 @@
+---
+title: SDS 315 - HW8"
+author: "Jason George (jg82397)"
+date: "https://github.com/JasonGeorge978/SDS-315"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.height=5, fig.width=10, warning=FALSE, message=FALSE, tidy=TRUE, echo=FALSE, tidy.opts=list(width.cutoff=60))
+```
+
+```{r}
+library(ggplot2)
+library(tinytex)
+library(mosaic)
+creatinine = read.csv('creatinine.csv')
+```
+
+\newpage
+
+## **Problem 1: regression warm up**
+
+```{r}
+lmcreat = lm(creatclear ~ age, data=creatinine)
+```
+
+
+### **Part A**
+
+```{r}
+expected_rate_for_55 = 147.8129158 + (-0.6198159*55)
+```
+The creatinine clearance rate should we expect for a 55-year-old is 113.7. The rate should be between 113-114 and this was determined by preforming a linear regression. Then these are the calculations: 147.8129158 + (-0.6198159*55)
+
+### **Part B**
+
+```{r}
+coef(lmcreat)
+```
+
+Creatinine clearance rate decreases by a value of -0.62 ml/minute per year with age. I got this value from the linear regression we did on the rate and age to find that value as the slope. 
+
+### **Part C**
+
+The 40-year-old with a rate of 135 is healthier. I determined this by doing the actual - expected of both and found the 40-year old had a increase of 11.9 from the expected. The equation for the 40 year old is `135 - (147.8129158 + (-0.6198159*40))`. The equation for the 60 year old is `112 - (147.8129158 + (-0.6198159*60))`. 
+
+\newpage
+
+## **Problem 2: Modeling disease growth**
+
+```{r}
+covid = read.csv('covid.csv')
+
+italy_covid = covid[covid$country=='Italy',]
+
+spain_covid = covid[covid$country=='Spain',]
+```
+
+```{r}
+boot_italy= do(10000)*lm(log(deaths) ~ days_since_first_death,data=resample(italy_covid))
+
+interval_italy = confint(boot_italy,level=0.95)
+
+
+```
+
+
+```{r}
+gr_italy_lower <- round(interval_italy$lower[interval_italy$name == "days_since_first_death"],3)
+gr_italy_upper <- round(interval_italy$upper[interval_italy$name == "days_since_first_death"],3)
+
+
+
+dt_italy_lower = round(70/(gr_italy_lower*100),1)
+dt_italy_upper = round(70/(gr_italy_upper*100),1)
+```
+
+### **Part 1**
+
+The 95% confidence interval of growth rate for Italy is from 0.159 to 0.208. The 95% confidence interval of doubling time in Italy is from 3.4 to 4.4. 
+
+```{r}
+boot_spain= do(10000)*lm(log(deaths) ~ days_since_first_death,data=resample(spain_covid))
+
+interval_spain = confint(boot_spain,level=0.95)
+```
+
+
+```{r}
+gr_spain_lower <- round(interval_spain$lower[interval_spain$name == "days_since_first_death"],3)
+gr_spain_upper <- round(interval_spain$upper[interval_spain$name == "days_since_first_death"],3)
+
+
+
+dt_spain_lower = round(70/(gr_spain_lower*100),1)
+dt_spain_upper = round(70/(gr_spain_upper*100),1)
+```
+
+The 95% confidence interval of growth rate for Spain is from 0.235 to 0.316. The 95% confidence interval of doubling time in Spain is from 2.2 to 3. 
+
+```{r}
+ggplot(covid) + geom_line(aes(x=days_since_first_death,y=deaths,color=country)) + theme_minimal()
+```
+
+
+\newpage
+
+## **Problem 3: price elasticity of demand**
+```{r}
+milk = read.csv('milk.csv')
+```
+
+```{r}
+boot_milk <- do(10000) * lm(log(sales) ~ log(price), data = resample(milk))
+
+interval_milk = confint(boot_milk,level=0.95)
+
+interval_milk
+
+#interval_milk$lower[interval_milk$name == "log.price."]
+
+#interval_milk$upper[interval_milk$name == "log.price."]
+
+
+```
+
+The 95% confidence interval for the price elasticity of the demand for milk is from -1.77 to -1.46. To estimate the elasticity I used the power law which means we can use linear regression on the log of both values. Then the bootstrap of the slope gives the elasticity. 
